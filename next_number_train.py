@@ -13,13 +13,15 @@ embed_size = 512
 vocab_size = 10  # 假设数字范围是 0 到 9, 超过为0
 input_length = 3
 output_length = 1
-fusion = 'fc' # [sum, fc, max_pooling]
+fusion = 'max_pooling' # [sum, fc, max_pooling]
 
 # 训练参数
 num_epochs = 10
 num_samples = 1000
 learning_rate = 0.001
 batch_size = 256
+
+model_path = 'mp_next_number.pth'
 
 # Val params
 val_samples = 100
@@ -83,7 +85,13 @@ if plot_training_loss:
     plt.title("Training Loss")
     plt.savefig("training_loss.png")
 
-model.eval()  # Set the model to evaluation mode
+torch.save(model.state_dict(), model_path)
+
+
+# 加载模型
+loaded_model = SimpleTransformer(embed_size, input_length, vocab_size, fusion).to(device)  # 创建模型实例
+loaded_model.load_state_dict(torch.load(model_path))
+loaded_model.eval()  # Set the model to evaluation mode
 
 # Example sequence
 sample_sequences, target_sequences = generate_data_next(val_samples, vocab_size, input_length, output_length)
@@ -98,7 +106,7 @@ with torch.no_grad():  # Disable gradient computation for inference
             sample_tensor = (
                 torch.tensor(sample_sequence, dtype=torch.long).unsqueeze(0).to(device)
             )
-            predictions = model(sample_tensor)
+            predictions = loaded_model(sample_tensor)
             predicted_index = predictions.argmax(
                 -1
             )  # Get the index of the max log-probability for the last position
